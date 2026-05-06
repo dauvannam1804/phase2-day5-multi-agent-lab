@@ -11,13 +11,21 @@ Runner = Callable[[str], ResearchState]
 
 
 def run_benchmark(run_name: str, query: str, runner: Runner) -> tuple[ResearchState, BenchmarkMetrics]:
-    """Measure latency and return a placeholder metric object.
-
-    TODO(student): Add quality scoring, estimated token cost, citation coverage, and error rate.
-    """
-
+    """Measure latency, cost, and record metrics."""
     started = perf_counter()
     state = runner(query)
     latency = perf_counter() - started
-    metrics = BenchmarkMetrics(run_name=run_name, latency_seconds=latency)
+    
+    # Calculate total cost from agent results if available
+    total_cost = 0.0
+    for event in state.trace:
+        payload = event.get("payload", {})
+        total_cost += payload.get("cost", 0.0) if payload else 0.0
+
+    metrics = BenchmarkMetrics(
+        run_name=run_name,
+        latency_seconds=latency,
+        estimated_cost_usd=total_cost,
+        notes=f"Total agents run: {len(state.route_history)}",
+    )
     return state, metrics
